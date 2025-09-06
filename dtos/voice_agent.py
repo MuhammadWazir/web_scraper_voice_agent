@@ -1,0 +1,12 @@
+from pydantic import BaseModel, HttpUrl
+from typing import Dict, Any
+
+
+class VoiceAgentRequest(BaseModel):
+    website_url: HttpUrl
+    target_audience: str
+
+
+class VoiceAgentResponse(BaseModel):
+    session_id: str
+    assets: Dict[str, Any]

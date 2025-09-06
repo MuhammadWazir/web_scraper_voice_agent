@@ -1,94 +1,112 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-import asyncio
-import json
+from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 import uuid
+import json
 
 from configs.config import load_settings
-from helpers.ws_init import get_init_params
-from helpers.scrape import scrape_with_firecrawl
-from helpers.prompts import compile_assets
-from helpers.bridge import connect_elevenlabs_ws, bidirectional_bridge
-from helpers.usage import CAMPAIGN_NAME, mark_session_start, mark_session_end
+from helpers.scrape import scrape_website
+from helpers.ai_processor import process_prompts
+from helpers.chat_ai import generate_response
+from dtos.voice_agent import VoiceAgentRequest, VoiceAgentResponse
 
 app = FastAPI(title="Web Scraper Voice Agent", version="1.0.0")
 
 settings = load_settings()
 
+voice_agents = {}
+chat_contexts = {}
 
-@app.websocket("/session")
-async def session(websocket: WebSocket):
-	await websocket.accept()
+
+@app.post("/create-voice-agent", response_model=VoiceAgentResponse)
+async def create_voice_agent(request: VoiceAgentRequest):
+	if not settings.openai_api_key:
+		raise HTTPException(status_code=500, detail="OpenAI API key not configured")
+	
 	session_id = uuid.uuid4().hex
-	started_at = mark_session_start(session_id)
+	
+	website_content = await scrape_website(str(request.website_url), 30)
+	
+	assets = await process_prompts(
+		settings.openai_api_key,
+		str(request.website_url),
+		website_content,
+		request.target_audience,
+		"gpt-4o"
+	)
+	
+	voice_agents[session_id] = {
+		"website_url": str(request.website_url),
+		"website_content": website_content,
+		"target_audience": request.target_audience,
+		"assets": assets
+	}
+	
+	return VoiceAgentResponse(
+		session_id=session_id,
+		assets=assets
+	)
 
+
+@app.websocket("/chat/{session_id}")
+async def chat_with_agent(websocket: WebSocket, session_id: str):
+	await websocket.accept()
+	
+	# Check if agent exists
+	if session_id not in voice_agents:
+		raise HTTPException(status_code=404, detail="Voice agent not found")
+	
+	if session_id not in chat_contexts:
+		chat_contexts[session_id] = []
+	
+	agent_data = voice_agents[session_id]
+	
+	await websocket.send_text(json.dumps({
+		"type": "agent_ready",
+		"message": f"Hi! I'm your assistant for {agent_data['website_url']}. How can I help you today?"
+	}))
+	
 	try:
-		try:
-			website_url, audience_context = await get_init_params(websocket)
-		except ValueError as ve:
-			await websocket.send_text(json.dumps({"type": "error", "message": str(ve)}))
-			await websocket.close(code=1008)
-			return
-
-		try:
-			website_text = await scrape_with_firecrawl(website_url, settings.scrape_timeout_seconds)
-		except Exception as e:
-			await websocket.send_text(json.dumps({"type": "error", "message": f"Failed to scrape website: {str(e)}"}))
-			await websocket.close(code=1011)
-			return
-
-		assets = compile_assets(website_text, audience_context)
-		await websocket.send_text(json.dumps({
-			"type": "assets",
-			"session_id": session_id,
-			"campaign": CAMPAIGN_NAME,
-			"website": website_url,
-			"audience": audience_context,
-			"assets": assets,
-		}))
-
-		if not settings.elevenlabs_api_key:
-			await websocket.send_text(json.dumps({"type": "error", "message": "Server missing ELEVENLABS_API_KEY"}))
-			await websocket.close(code=1011)
-			return
-
-		eleven_ws_url = settings.elevenlabs_ws_url
-		headers = {"Authorization": f"Bearer {settings.elevenlabs_api_key}"}
-		if settings.shared_agent_id:
-			headers["x-agent-id"] = settings.shared_agent_id
-
-		async with connect_elevenlabs_ws(eleven_ws_url, headers) as eleven_ws:
-			init_payload = {
-				"type": "session_init",
-				"session_id": session_id,
-				"campaign": CAMPAIGN_NAME,
-				"audience": audience_context,
-				"assets": assets,
-			}
-			try:
-				await eleven_ws.send(json.dumps(init_payload))
-			except Exception:
-				pass
-
-			await bidirectional_bridge(websocket, eleven_ws)
-
+		while True:
+			data = await websocket.receive_text()
+			message = json.loads(data)
+			
+			if message.get("type") == "user_message":
+				user_text = message.get("text", "")
+				
+				# Add user message to context
+				chat_contexts[session_id].append({"type": "user", "text": user_text})
+				
+				# Generate intelligent response
+				ai_response = await generate_response(
+					settings.openai_api_key,
+					agent_data,
+					chat_contexts[session_id],
+					user_text
+				)
+				
+				# Add agent response to context
+				chat_contexts[session_id].append({"type": "agent", "text": ai_response})
+				
+				response = {
+					"type": "agent_response", 
+					"text": ai_response
+				}
+				
+				await websocket.send_text(json.dumps(response))
+				
 	except WebSocketDisconnect:
 		pass
 	except Exception as e:
-		try:
-			await websocket.send_text(json.dumps({"type": "error", "message": str(e)}))
-		except Exception:
-			pass
+		print(f"WebSocket error: {e}")
 	finally:
-		mark_session_end(session_id, started_at)
 		try:
 			await websocket.close()
-		except Exception:
+		except:
 			pass
 
 
 @app.get("/")
 async def root():
-	return {"message": "Hello world"}
+	return {"message": "Voice Agent System Ready"}
 
 
 if __name__ == "__main__":
