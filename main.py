@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
 import uuid
 import json
-
+import time
 from configs.config import load_settings
 from helpers.scrape import scrape_website
-from helpers.ai_processor import process_prompts
+from helpers.ai_processor import process_prompts, create_keywords
 from helpers.chat_ai import generate_response
 from dtos.voice_agent import VoiceAgentRequest, VoiceAgentResponse
 
@@ -18,15 +18,11 @@ chat_contexts = {}
 
 @app.post("/create-voice-agent", response_model=VoiceAgentResponse)
 async def create_voice_agent(request: VoiceAgentRequest):
-	if not settings.openai_api_key:
-		raise HTTPException(status_code=500, detail="OpenAI API key not configured")
-	
+	time_start = time.time()
 	session_id = uuid.uuid4().hex
-	
-	website_content = await scrape_website(str(request.website_url), 30)
+	website_content = await scrape_website(str(request.website_url))
 	
 	assets = await process_prompts(
-		settings.openai_api_key,
 		str(request.website_url),
 		website_content,
 		request.target_audience,
@@ -39,7 +35,8 @@ async def create_voice_agent(request: VoiceAgentRequest):
 		"target_audience": request.target_audience,
 		"assets": assets
 	}
-	
+	time_end = time.time()
+	print(f"Time taken: {time_end - time_start} seconds")
 	return VoiceAgentResponse(
 		session_id=session_id,
 		assets=assets
