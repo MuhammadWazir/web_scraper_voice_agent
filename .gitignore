@@ -1,5 +1,5 @@
-.env
-uv.lock
+backend/.env
+backend/uv.lock
 .venv
 **/__pycache__
 *.pyc

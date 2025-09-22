@@ -1,0 +1,63 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <title>Web Scraper Voice Agent</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <h2>Web Scraper Voice Agent</h2>
+    
+    <!-- Agent Creation Form -->
+    <div class="agent-creation-container" id="agentCreationContainer">
+        <h3>Create Voice Agent</h3>
+        <div class="form-group">
+            <label for="websiteUrl">Website URL:</label>
+            <input type="url" id="websiteUrl" placeholder="https://example.com" required>
+        </div>
+        <div class="form-group">
+            <label for="targetAudience">Target Audience:</label>
+            <input type="text" id="targetAudience" placeholder="General users, developers, etc." required>
+        </div>
+        <button id="createAgentBtn" onclick="createAgent()">Create Voice Agent</button>
+        <div id="agentStatus">Ready to create agent</div>
+        
+        <!-- Enhanced Loading Spinner -->
+        <div id="loadingSpinner" style="display: none;">
+            <div class="spinner"></div>
+            <div class="loading-text">
+                <p><strong>Creating your voice agent...</strong></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Section (Hidden initially) -->
+    <div class="chat-section" id="chatSection" style="display: none;">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>Chat with Agent</h3>
+            <button onclick="createNewAgent()" style="background: #6c757d; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">New Agent</button>
+        </div>
+        <div id="status">Ready to chat</div>
+        
+        <div id="chat"></div>
+        
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <input type="text" id="messageInput" placeholder="Type your message..." onkeypress="handleKeyPress(event)" style="flex: 1;">
+            <button id="sendBtn" onclick="sendMessage()">Send</button>
+        </div>
+    </div>
+    
+    <!-- ElevenLabs Voice Widget (Hidden initially) -->
+    <div class="elevenlabs-widget-container" id="voiceWidgetContainer" style="display: none;">
+        <div id="elevenLabsWidget">
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="js/agent.js"></script>
+    <script
+        src="https://unpkg.com/@elevenlabs/convai-widget-embed"
+        async
+        type="text/javascript">
+    </script>
+</body>
+</html>

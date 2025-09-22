@@ -1,4 +1,5 @@
-from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+﻿from fastapi import FastAPI, HTTPException, WebSocket, WebSocketDisconnect
+from fastapi.middleware.cors import CORSMiddleware
 import uuid
 import json
 import time
@@ -9,6 +10,15 @@ from helpers.chat_ai import generate_response
 from dtos.voice_agent import VoiceAgentRequest, VoiceAgentResponse
 
 app = FastAPI(title="Web Scraper Voice Agent", version="1.0.0")
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 settings = load_settings()
 
