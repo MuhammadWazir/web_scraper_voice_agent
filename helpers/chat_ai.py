@@ -1,8 +1,8 @@
 from openai import AsyncOpenAI
-
+from helpers.ai_processor import get_openai_client
 
 async def generate_response(api_key: str, agent_data: dict, chat_history: list, user_message: str) -> str:
-    client = AsyncOpenAI(api_key=api_key)
+    client = await get_openai_client()
     
     # Build context from website and chat history
     context = f"""You are a voice agent for {agent_data['website_url']}.

@@ -4,7 +4,7 @@ import json
 import time
 from configs.config import load_settings
 from helpers.scrape import scrape_website
-from helpers.ai_processor import process_prompts, create_keywords
+from helpers.ai_processor import process_prompts
 from helpers.chat_ai import generate_response
 from dtos.voice_agent import VoiceAgentRequest, VoiceAgentResponse
 
@@ -26,7 +26,7 @@ async def create_voice_agent(request: VoiceAgentRequest):
 		str(request.website_url),
 		website_content,
 		request.target_audience,
-		"gpt-4o"
+		"gpt-5"
 	)
 	
 	voice_agents[session_id] = {

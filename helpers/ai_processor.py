@@ -10,9 +10,18 @@ from configs.constants import (
 
 config = load_settings()
 
-async def process_prompts( website_url: str, content: str, audience: str, model: str = "gpt-4o"):
+# Global client for connection pooling to support concurrent requests
+_openai_client = None
+
+async def get_openai_client():
+    global _openai_client
+    if _openai_client is None:
+        _openai_client = AsyncOpenAI(api_key=config.openai_api_key)
+    return _openai_client
+
+async def process_prompts(website_url: str, content: str, audience: str, model: str = "gpt-4o"):
     print(f"Processing prompts for {website_url} and audience: {audience}")
-    client = AsyncOpenAI(api_key=config.openai_api_key)
+    client = await get_openai_client()
     
     prompts = {
         "background": _prepare_prompt(BACKGROUND_CONTEXT_PROMPT, website_url, content, audience),
@@ -57,36 +66,29 @@ def _prepare_prompt(template: str, url: str, content: str, audience: str) -> str
 
 
 async def _call_openai(client: AsyncOpenAI, model: str, prompt: str, key: str):
-    system_message = "You are an expert voice agent creator. Generate the requested content based on the provided website data. Do not ask for clarification - use the context provided to create the complete output."
-    
-    response = await client.chat.completions.create(
-        model=model,
-        messages=[
-            {"role": "system", "content": system_message},
-            {"role": "user", "content": prompt}
-        ],
-        max_tokens=2000,
-        temperature=0.7
-    )
+    system_message = "You are an expert voice agent creator. Generate the requested content based on the provided website data. Do not ask for clarification - use the context provided to create the complete output. Return plain text, no markdown, no * or # or \\n or any other formatting."
+    response = None
+    if model == "gpt-5":
+        response = await client.chat.completions.create(
+                model=model,
+                reasoning_effort="medium",
+                messages=[
+                    {"role": "system", "content": system_message},
+                    {"role": "user", "content": prompt}
+                ],
+            )
+    else:
+        response = await client.chat.completions.create(
+            model=model,
+            messages=[
+                {"role": "system", "content": system_message},
+                {"role": "user", "content": prompt}
+            ],
+        )
     return (key, response.choices[0].message.content.strip()) 
 
-async def create_keywords(api_key: str, website_url: str,audience: str, model: str = "gpt-4o") -> list[str]:
-    print(f"Creating keywords for {website_url} and audience: {audience}")
-    client = AsyncOpenAI(api_key=api_key)
-    
-    prompt = f"Create 10 keywords for the following website: {website_url} and audience: {audience}. Return the keywords as a comma separated values."
-    
-    response = await client.chat.completions.create(
-        model=model,
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=50,
-        temperature=0.7
-    )
-    keywords_list = response.choices[0].message.content.strip().split(",")
-    return keywords_list
-
 async def summarize_chunks_in_parallel(chunks: list[str], model: str = "gpt-4o") -> str:
-    client = AsyncOpenAI(api_key=config.openai_api_key)
+    client = await get_openai_client()
     
     async def summarize_chunk(chunk: str, index: int) -> tuple[str, str]:
         system_message = "You are an expert summarizer. Summarize the following text into a maximum of 100 words with the most important information. use the context provided to create the complete output."
@@ -96,8 +98,6 @@ async def summarize_chunks_in_parallel(chunks: list[str], model: str = "gpt-4o")
                 {"role": "system", "content": system_message},
                 {"role": "user", "content": chunk}
             ],
-            max_tokens=200,
-            temperature=0.7
         )
         return (str(index), response.choices[0].message.content.strip())
     

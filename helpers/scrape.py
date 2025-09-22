@@ -20,7 +20,8 @@ async def scrape_website(url: str) -> str:
 	async with AsyncWebCrawler() as crawler:
 		result = await crawler.arun(
 			url=url,
-			config=config
+			config=config,
+			bypass_cache=True
 		)
 		if not result:
 			return ""
