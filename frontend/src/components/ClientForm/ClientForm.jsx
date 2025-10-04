@@ -26,7 +26,7 @@ function ClientForm({ onClientCreated }) {
 
     try {
       setCreating(true);
-      const response = await fetch('/api/create-voice-agent', {
+      const response = await fetch('/api/clients/create-voice-agent', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

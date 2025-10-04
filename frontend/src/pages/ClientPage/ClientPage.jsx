@@ -150,27 +150,37 @@ ${faqs}`;
     return escapeForAttribute(prompt);
   };
 
-  const initializeWidget = () => {
+  const initializeWidget = async () => {
     if (!widgetContainerRef.current || !client) return;
-
-    console.log('Creating widget for:', client.company_name);
 
     // Clear existing widget
     widgetContainerRef.current.innerHTML = '';
 
     // Generate main prompt using client's prompts data
     const mainPrompt = generateMainPrompt(client.prompts);
-    console.log('Generated prompt:', mainPrompt);
+
+    // Fetch signed URL from backend for security
+    let signedUrl = '';
+    try {
+      const resp = await fetch(`/api/signed-url`);
+      if (resp.ok) {
+        const data = await resp.json();
+        signedUrl = data?.signed_url || '';
+      }
+    } catch (e) {
+      // Non-fatal; widget can still attempt without signed url
+    }
 
     // Create ElevenLabs widget element with all attributes
     const widget = document.createElement('elevenlabs-convai');
-    widget.setAttribute('agent-id', 'agent_7201k5s3wn87e8fbzzss122we14r');
+    if (signedUrl) {
+      widget.setAttribute('signed-url', signedUrl);
+    }
     widget.setAttribute('override-prompt', mainPrompt);
     widget.setAttribute('override-first-message', 'Hello! How can I help you today?');
     widget.setAttribute('action-text', 'Start Voice Chat');
     
     widgetContainerRef.current.appendChild(widget);
-    console.log('Widget created and appended');
   };
 
   if (loading) {
