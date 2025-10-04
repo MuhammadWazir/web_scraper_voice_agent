@@ -1,0 +1,16 @@
+{
+  "name": "web_scraper_voice_agent",
+  "version": "1.0.0",
+  "description": "Web scraper voice agent application",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@elevenlabs/convai-widget-embed": "latest"
+  },
+  "devDependencies": {
+    "vite": "^5.0.0"
+  }
+} 
