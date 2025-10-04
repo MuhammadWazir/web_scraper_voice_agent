@@ -1,6 +1,4 @@
 import asyncio
-import json
-import uuid
 from openai import AsyncOpenAI
 from configs.config import load_settings
 from configs.constants import (
@@ -108,42 +106,3 @@ async def summarize_chunks_in_parallel(chunks: list[str], model: str = "gpt-4o")
     summaries = [result[1] for result in results]
     return "\n".join(summaries)
 
-async def get_client_by_id(client_id: str) -> dict | None:
-    try:
-        with open('data.json', 'r', encoding="utf-8") as f:
-            data = json.load(f)
-        for client in data['clients']:
-            if client['client_id'] == client_id:
-                return client
-        return None
-    except FileNotFoundError:
-        return None
-
-async def save_client_to_data_json(request_data: dict, prompts: dict) -> bool:
-    try:
-        # Try to load existing data
-        try:
-            with open('data.json', 'r') as f:
-                data = json.load(f)
-        except FileNotFoundError:
-            # Create new data structure if file doesn't exist
-            data = {"clients": []}
-        
-        # Create new client entry
-        new_client = {
-            "client_id": str(uuid.uuid4()),
-            "request": request_data,
-            "prompts": prompts
-        }
-        
-        # Add to clients list
-        data["clients"].append(new_client)
-        
-        # Save back to file
-        with open('data.json', 'w') as f:
-            json.dump(data, f, indent=4)
-        
-        return True
-    except Exception as e:
-        print(f"Error saving client data: {e}")
-        return False

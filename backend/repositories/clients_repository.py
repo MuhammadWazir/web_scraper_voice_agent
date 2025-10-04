@@ -1,0 +1,48 @@
+import json
+import uuid
+from typing import Any, Dict, List, Optional
+
+
+DATA_FILE = 'data.json'
+
+
+def load_all_clients() -> List[Dict[str, Any]]:
+	try:
+		with open(DATA_FILE, 'r', encoding='utf-8') as f:
+			data = json.load(f)
+		return data.get('clients', [])
+	except FileNotFoundError:
+		return []
+
+
+def save_all_clients(clients: List[Dict[str, Any]]) -> None:
+	data = {"clients": clients}
+	with open(DATA_FILE, 'w', encoding='utf-8') as f:
+		json.dump(data, f, indent=4)
+
+
+def get_client_by_id(client_id: str) -> Optional[Dict[str, Any]]:
+	clients = load_all_clients()
+	for client in clients:
+		if client.get('client_id') == client_id:
+			return client
+	return None
+
+
+def add_client(request_data: Dict[str, Any], prompts: Dict[str, Any], company_name: str) -> bool:
+	try:
+		clients = load_all_clients()
+		new_client = {
+			"client_id": str(uuid.uuid4()),
+			"request": request_data,
+			"company_name": company_name,
+			"prompts": prompts,
+		}
+		clients.append(new_client)
+		save_all_clients(clients)
+		return True
+	except Exception as e:
+		print(f"Error saving client data: {e}")
+		return False
+
+
