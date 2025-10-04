@@ -1,47 +1,12 @@
 ﻿<!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Web Scraper Voice Agent</title>
-    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-    <h2>Web Scraper Voice Agent</h2>
-    
-    <!-- Agent Creation Form -->
-    <div class="agent-creation-container" id="agentCreationContainer">
-        <h3>Create Voice Agent</h3>
-        <div class="form-group">
-            <label for="websiteUrl">Website URL:</label>
-            <input type="url" id="websiteUrl" placeholder="https://example.com" required>
-        </div>
-        <div class="form-group">
-            <label for="targetAudience">Target Audience:</label>
-            <input type="text" id="targetAudience" placeholder="General users, developers, etc." required>
-        </div>
-        <button id="createAgentBtn" onclick="createAgent()">Create Voice Agent</button>
-        <div id="agentStatus">Ready to create agent</div>
-        
-        <!-- Enhanced Loading Spinner -->
-        <div id="loadingSpinner" style="display: none;">
-            <div class="spinner"></div>
-            <div class="loading-text">
-                <p><strong>Creating your voice agent...</strong></p>
-            </div>
-        </div>
-    </div>
-    
-    <!-- ElevenLabs Voice Widget (Hidden initially) -->
-    <div class="elevenlabs-widget-container" id="voiceWidgetContainer" style="display: none;">
-        <div id="elevenLabsWidget">
-        </div>
-    </div>
-
-    <!-- Scripts -->
-    <script type="module" src="js/agent.js"></script>
-    <script
-        src="https://unpkg.com/@elevenlabs/convai-widget-embed"
-        async
-        type="text/javascript">
-    </script>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
 </body>
 </html>
