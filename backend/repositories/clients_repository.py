@@ -29,20 +29,35 @@ def get_client_by_id(client_id: str) -> Optional[Dict[str, Any]]:
 	return None
 
 
-def add_client(request_data: Dict[str, Any], prompts: Dict[str, Any], company_name: str) -> bool:
+def add_client(request_data: Dict[str, Any], prompts: Dict[str, Any], company_name: str) -> str | None:
 	try:
 		clients = load_all_clients()
+		client_id = str(uuid.uuid4())
 		new_client = {
-			"client_id": str(uuid.uuid4()),
+			"client_id": client_id,
 			"request": request_data,
 			"company_name": company_name,
 			"prompts": prompts,
 		}
 		clients.append(new_client)
 		save_all_clients(clients)
-		return True
+		return client_id
 	except Exception as e:
 		print(f"Error saving client data: {e}")
+		return None
+
+
+def update_client_prompts(client_id: str, prompts: Dict[str, Any]) -> bool:
+	try:
+		clients = load_all_clients()
+		for client in clients:
+			if client.get('client_id') == client_id:
+				client['prompts'] = prompts
+				save_all_clients(clients)
+				return True
+		return False
+	except Exception as e:
+		print(f"Error updating client prompts: {e}")
 		return False
 
 

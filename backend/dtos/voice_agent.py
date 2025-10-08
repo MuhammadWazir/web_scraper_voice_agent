@@ -9,5 +9,4 @@ class VoiceAgentRequest(BaseModel):
 
 
 class VoiceAgentResponse(BaseModel):
-    session_id: str
-    assets: Dict[str, Any]
+    client_id: str

@@ -31,7 +31,6 @@ async def create_voice_agent(request: VoiceAgentRequest):
 		company_name=request.company_name,
 	)
 	return VoiceAgentResponse(
-		session_id=result["session_id"],
-		assets=result["assets"],
+		client_id=result["client_id"],
 	)
 

@@ -20,44 +20,23 @@ function ClientForm({ onClientCreated }) {
     e.preventDefault();
     
     if (!formData.website_url || !formData.target_audience || !formData.company_name) {
-      alert('Please fill in all fields');
       return;
     }
 
     try {
       setCreating(true);
-      const response = await fetch('/api/clients/create-voice-agent', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          website_url: formData.website_url,
-          target_audience: formData.target_audience,
-          company_name: formData.company_name,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create client');
-      }
-
-      // Reset form
-      setFormData({
-        website_url: '',
-        target_audience: '',
-        company_name: ''
-      });
-
-      // Notify parent component
-      if (onClientCreated) {
-        onClientCreated();
-      }
       
-      alert('Client created successfully!');
+      const response = await fetch('/api/create-voice-agent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData),
+      });
+
+      if (response.ok) {
+        setFormData({ website_url: '', target_audience: '', company_name: '' });
+        if (onClientCreated) onClientCreated();
+      }
     } catch (error) {
-      console.error('Error creating client:', error);
-      alert('Failed to create client');
     } finally {
       setCreating(false);
     }

@@ -13,6 +13,16 @@
   border-color: #667eea;
 }
 
+.client-card.generating {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.client-card.generating:hover {
+  transform: none;
+  box-shadow: none;
+}
+
 .client-card-header h3 {
   color: #333;
   font-size: 1.3rem;
@@ -54,5 +64,45 @@
 
 .view-btn:hover {
   background: #5568d3;
+}
+
+.view-btn:disabled {
+  background: #ccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.generating-status {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(102, 126, 234, 0.1);
+  border-radius: 8px;
+  border-left: 3px solid #667eea;
+}
+
+.generating-status .spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #667eea;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  flex-shrink: 0;
+}
+
+.generating-status p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #667eea;
+  font-weight: 600;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 

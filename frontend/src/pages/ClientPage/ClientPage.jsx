@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import './ClientPage.css';
 
 function ClientPage() {
   const { clientId } = useParams();
-  const navigate = useNavigate();
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [widgetLoaded, setWidgetLoaded] = useState(false);
   const widgetContainerRef = useRef(null);
+  const prompts = client?.prompts;
+  const areAllPromptsNull = !prompts || Object.values(prompts).every((v) => v === null || v === undefined);
+  const isGenerating = areAllPromptsNull;
 
   const handleVoiceCall = () => {
     // Try to trigger the ElevenLabs widget if it exists
@@ -24,6 +26,16 @@ function ClientPage() {
     fetchClient();
   }, [clientId]);
 
+  // Poll for prompts while they are being generated
+  useEffect(() => {
+    if (loading || error) return;
+    if (!isGenerating) return;
+    const intervalId = setInterval(() => {
+      fetchClient(true);
+    }, 5000);
+    return () => clearInterval(intervalId);
+  }, [loading, error, isGenerating, clientId]);
+
   useEffect(() => {
     // Load ElevenLabs script if not already loaded
     if (!document.querySelector('script[src*="elevenlabs"]')) {
@@ -34,26 +46,27 @@ function ClientPage() {
     }
 
     // Initialize widget when client data is available
-    if (client && widgetContainerRef.current) {
+    if (client && widgetContainerRef.current && !isGenerating) {
       initializeWidget();
     }
-  }, [client]);
+  }, [client, isGenerating]);
 
-  const fetchClient = async () => {
+  const fetchClient = async (silent = false) => {
     try {
-      setLoading(true);
-      const response = await fetch(`/api/client/${clientId}`);
+      if (!silent) setLoading(true);
+      const response = await fetch(`/api/client/${clientId}?t=${Date.now()}`, { cache: 'no-store' });
       
       if (!response.ok) {
         throw new Error('Client not found');
       }
       
       const data = await response.json();
+      console.log('Fetched client prompts:', data?.prompts);
       setClient(data);
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
@@ -200,9 +213,6 @@ ${faqs}`;
         <div className="error-container">
           <h2>Error</h2>
           <p>{error}</p>
-          <button onClick={() => navigate('/')} className="back-btn">
-            ← Back to Home
-          </button>
         </div>
       </div>
     );
@@ -210,17 +220,23 @@ ${faqs}`;
 
   return (
     <div className="client-page">
-      <button onClick={() => navigate('/')} className="back-btn">← Back to Home</button>
       <div className="client-header">
         <h1>{client?.company_name || 'Client Agent'}</h1>
-        <div className="client-details">
-          <p><strong>Website:</strong> <a href={client?.request?.website_url} target="_blank" rel="noopener noreferrer">{client?.request?.website_url}</a></p>
-          <p><strong>Target Audience:</strong> {client?.request?.target_audience}</p>
-        </div>
+      </div>
+
+      <div className="widget-actions" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
+        <button
+          className="back-btn"
+          onClick={handleVoiceCall}
+          disabled={isGenerating}
+          title={isGenerating ? 'Generating prompt' : ''}
+        >
+          {isGenerating ? 'Generating prompt...' : 'Start Voice Chat'}
+        </button>
       </div>
       
       <div ref={widgetContainerRef}>
-        {/* ElevenLabs widget will be inserted here */}
+        {/* ElevenLabs widget will be inserted here when prompts are ready */}
       </div>
     </div>
   );
