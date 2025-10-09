@@ -33,6 +33,7 @@ function ClientForm({ onClientCreated }) {
       });
 
       if (response.ok) {
+        const data = await response.json();
         setFormData({ website_url: '', target_audience: '', company_name: '' });
         if (onClientCreated) onClientCreated();
       }
