@@ -4,7 +4,6 @@ import asyncio
 from helpers.scrape import scrape_website
 from helpers.ai_processor import process_prompts
 from repositories.clients_repository import add_client, load_all_clients, get_client_by_id, update_client_prompts
-from services.websocket_manager import manager
 
 
 async def create_voice_agent_service(website_url: str, target_audience: str, company_name: str) -> dict:
@@ -27,9 +26,9 @@ async def create_voice_agent_service(website_url: str, target_audience: str, com
 	# Process prompts in background
 	asyncio.create_task(process_prompts_background(client_id, website_url, target_audience))
 
-	return {
-		"client_id": client_id,
-	}
+	# Return the client data immediately
+	client_data = get_client_by_id(client_id)
+	return client_data
 
 
 async def process_prompts_background(client_id: str, website_url: str, target_audience: str):
@@ -43,10 +42,6 @@ async def process_prompts_background(client_id: str, website_url: str, target_au
 		)
 
 		update_success = update_client_prompts(client_id, assets)
-		if update_success:
-			updated_client = get_client_by_id(client_id)
-			if updated_client:
-				await manager.broadcast_client_update(updated_client)
 	except Exception as e:
 		pass
 

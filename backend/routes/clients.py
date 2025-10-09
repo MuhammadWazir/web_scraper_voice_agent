@@ -30,7 +30,5 @@ async def create_voice_agent(request: VoiceAgentRequest):
 		target_audience=request.target_audience,
 		company_name=request.company_name,
 	)
-	return VoiceAgentResponse(
-		client_id=result["client_id"],
-	)
+	return VoiceAgentResponse(**result)
 

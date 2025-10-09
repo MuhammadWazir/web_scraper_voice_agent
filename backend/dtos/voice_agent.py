@@ -10,3 +10,6 @@ class VoiceAgentRequest(BaseModel):
 
 class VoiceAgentResponse(BaseModel):
     client_id: str
+    request: dict
+    company_name: str
+    prompts: dict
