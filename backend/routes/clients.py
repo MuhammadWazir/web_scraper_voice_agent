@@ -2,9 +2,12 @@ from fastapi import APIRouter, HTTPException
 from services.clients_service import (
 	create_voice_agent_service,
 	get_all_clients_service,
-	get_client_by_id_service,
+	get_client_by_url_slug_service,
+	get_client_voice_service,
+	update_client_voice_service,
 )
 from dtos.voice_agent import VoiceAgentRequest, VoiceAgentResponse
+from dtos.voice import VoiceUpdate
 
 router = APIRouter(prefix="", tags=["clients"])
 
@@ -17,8 +20,7 @@ async def get_all_clients():
 
 @router.get("/client/{client_id}")
 async def get_client(client_id: str):
-	"""Get client data by ID"""
-	client_data = get_client_by_id_service(client_id)
+	client_data = get_client_by_url_slug_service(client_id)
 	if not client_data:
 		raise HTTPException(status_code=404, detail="Client not found")
 	return client_data
@@ -32,5 +34,22 @@ async def create_voice_agent(request: VoiceAgentRequest):
 	)
 	return VoiceAgentResponse(
 		client_id=result["client_id"],
+		url=result["url_slug"],
 	)
+
+
+@router.get("/client/{client_id}/voice")
+async def get_client_voice(client_id: str):
+	voice_id = get_client_voice_service(client_id)
+	if voice_id is None:
+		return {"voice_id": None}
+	return {"voice_id": voice_id}
+
+
+@router.put("/client/{client_id}/voice")
+async def update_client_voice(client_id: str, update: VoiceUpdate):
+	success = update_client_voice_service(client_id, update.voice_id)
+	if not success:
+		raise HTTPException(status_code=404, detail="Client not found or update failed")
+	return {"message": "Voice updated"}
 

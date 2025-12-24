@@ -1,29 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import './ClientPage.css';
 
 function ClientPage() {
   const { clientId } = useParams();
+  const navigate = useNavigate();
   const [client, setClient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [widgetLoaded, setWidgetLoaded] = useState(false);
+  const [overallPromptData, setOverallPromptData] = useState(null);
+  const [clientVoiceId, setClientVoiceId] = useState('');
   const widgetContainerRef = useRef(null);
   const prompts = client?.prompts;
   const areAllPromptsNull = !prompts || Object.values(prompts).every((v) => v === null || v === undefined);
   const isGenerating = areAllPromptsNull;
 
-  const handleVoiceCall = () => {
-    // Try to trigger the ElevenLabs widget if it exists
-    const widget = document.querySelector('elevenlabs-convai');
-    const button = widget.querySelector('button');
-      if (button) {
-        button.click();
-    }
-  };
-
   useEffect(() => {
     fetchClient();
+    fetchOverallPrompt();
+    fetchClientVoice();
   }, [clientId]);
 
   // Poll for prompts while they are being generated
@@ -49,7 +45,7 @@ function ClientPage() {
     if (client && widgetContainerRef.current && !isGenerating) {
       initializeWidget();
     }
-  }, [client, isGenerating]);
+  }, [client, isGenerating, clientVoiceId]);
 
   const fetchClient = async (silent = false) => {
     try {
@@ -61,12 +57,35 @@ function ClientPage() {
       }
       
       const data = await response.json();
-      console.log('Fetched client prompts:', data?.prompts);
       setClient(data);
     } catch (err) {
       setError(err.message);
     } finally {
       if (!silent) setLoading(false);
+    }
+  };
+
+  const fetchOverallPrompt = async () => {
+    try {
+      const response = await fetch(`/api/client/${clientId}/overall-prompt`);
+      if (response.ok) {
+        const data = await response.json();
+        setOverallPromptData(data);
+      }
+    } catch (err) {
+      console.error('Error fetching overall prompt:', err);
+    }
+  };
+
+  const fetchClientVoice = async () => {
+    try {
+      const resp = await fetch(`/api/client/${clientId}/voice`);
+      if (resp.ok) {
+        const data = await resp.json();
+        setClientVoiceId(data.voice_id || '');
+      }
+    } catch (err) {
+      // ignore
     }
   };
 
@@ -77,12 +96,6 @@ function ClientPage() {
     const latd = now.toLocaleString("en-US", { timeZone: "America/Los_Angeles", weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'});
     const sytd = now.toLocaleString("en-US", { timeZone: "Australia/Sydney", weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'});
     
-    const assistantName = "Ariana";
-    const languageTone = "Casual laid back Australian";
-    const companyProfile = assets.background || "";
-    const additionalRules = assets.rules || "";
-    const scripts = assets.script || "";
-    const faqs = assets.faqs || "";
     
     // Helper function to escape quotes and clean text for HTML attribute
     const escapeForAttribute = (text) => {
@@ -98,66 +111,21 @@ function ClientPage() {
         .trim();
     };
     
-    // Create the prompt with proper escaping
-    const prompt = `## CONTEXT ##
-
-Today is ${daysOfWeek[now.getUTCDay()]}, ${now.toISOString().replace("T",", ").replace("Z"," in UTC")}
-Today is ${nytd} in America/New York
-Today is ${latd} in America/Los Angeles
-Today is ${sytd} in Australia/Sydney
-
-You are a human assistant named ${assistantName}, using a ${languageTone} tone, working for the company described below. Continue this conversation adhering to the below RULES, using the FAQs as reference and the script example as a guide on how to structure the call. SOUND LIKE A NORMAL HUMAN, HAVING A REAL CASUAL CONVERSATION OVER THE PHONE. Include LOTS of laid back lingo and softening and filler words like "kinda...", "really...", "uhm..." "ahhhh...", "oh yeah...".
-
-## Our Company Introduction (Background) ##
-
-${companyProfile}
-
-## USER CONTEXT ##
-
-Their Email: @UserEmail 
-Their Phone: @UserPhone 
-
-Below are additional details about the person/user you are currently speaking with. Tailor your script and replies accordingly to better match this user's needs and mindset.
-@UserContext
-
-## PRIMARY RULES TO FOLLOW - SUPERCEDES YOUR OTHER INSTRUCTIONS ##
-
-1. Model and match the wording of the prospect you are talking with. Mirror their language, words and how they speak. Use words they say a lot. Keep your replies short if theirs are short.
-
-2. If you have already said a phrase or sentence, do not repeat it more than twice unless specifically asked to repeat. Avoid getting stuck in loops of saying the same thing over and over again on repeat more than twice. Move on to the next step instead.
-
-3. If you are receiving VERY incomplete sentences (or sentences which don't make sense at all) which seems like the line is cutting out on a call, mention you're sorry but bear with me, as it seems like the connection is cutting out... Could you repeat?
-
-4. Anything in the script which is between [square brackets] DO NOT directly reply with. You should instead take whatever is between the [square brackets] as notes for your own use in DECIDING what to reply with.
-
-5. IF SOMEONE GIVES YOU AN OBJECTION OR IS NOT INTERESTED, DO NOT HANG UP IMMEDIATELY. INSTEAD, HANDLE THE OBJECTION AND CONTINUE DOWN THE SCRIPT. ONE OPTION IS TO ACKNOWLEDGE WHAT THEY SAID THEN SAY "CAN I JUST ASK A QUICK QUESTION..." AND THEN SAY THE NEXT LINE. ANOTHER OPTION IS TO REFER TO THE FAQS BELOW. DO NOT HANG UP UNTIL YOU HAVE HANDLED AT LEAST 3 OBJECTIONS.
-
-6. IF SOMEONE ASKS A QUESTION, ANSWER IT BEFORE SAYING YOUR NEXT LINE! DON'T IGNORE THEM! ALWAYS BLEND WHAT THE PERSON SAID, INTO YOUR NEXT LINE, BEFORE YOU CONTINUE.
-
-7. If someone is interested but wishes for you to call them back at a future date, first try keep them on the phone 1 time, if they still ask you to call them back again at a future date, then first find out which date, and say no problem you'll talk to them at the time they said to call back. BUT if they say to call back later and it DOES NOT sound like they are interested, try to keep them on the phone at least 3 times!
-
-8. If someone wants to be removed from our list or opt out, first tell them "no problem we can do that... Just checking, you enquired about [what we're offering], right?" If they say they did, continue the conversation per the script. If they say they didn't, say something like "No problem must be the wrong number. Enjoy your day!" or a more appropriate response based on the context of the conversation.
-
-9. Use ACTIVE LISTENING! If someone says something or asks a particular question, DO NOT simply say the next line in your script! Instead, make what you say actually MAKE SENSE in the context of the conversation! Don't talk AT them, instead, HAVE A NATURAL CONVERSATION. Repeat what they say back, answer questions, and blend their context into your next reply.
-
-## ADDITIONAL RULES ##
-
-${additionalRules}
-
-## EXAMPLE SCRIPT TO LOOSELY FOLLOW FOR CALL CONVERSATIONS ##
-Script outline - keep it on track and bring the conversation back to script! Use a ${languageTone} tone. DO NOT say anything in between [square brackets], these are just YOUR notes to help you DECIDE what to say next, or to tell you what to do.
-
-NOTE: IF their first message sounds like an answering machine voice message, like "PLEASE LEAVE A MESSAGE" or "VOICE MAIL", then LEAVE A VOICE MESSAGE AND HANG UP. DO NOT CONTINUE THE SCRIPT!
-
-${scripts}
-
-## FAQS AND OBJECTIONS/HANDLES ##
-If answering a FAQ, follow your answer up by continuing down the script. If unable to answer a question accurately, say you're unsure on the specifics, and that you can let your team know that you'd like those details.
-
-${faqs}`;
-
-    // Log the prompt length for debugging
-    console.log('Generated prompt length:', prompt.length);
+    // Use the custom or default overall prompt template
+    let prompt = overallPromptData.overall_prompt || "";
+    
+    // Replace placeholders
+    prompt = prompt
+      .replace(/{day_of_week}/g, daysOfWeek[now.getUTCDay()])
+      .replace(/{current_datetime_utc}/g, now.toISOString().replace("T",", ").replace("Z"," in UTC"))
+      .replace(/{current_datetime_ny}/g, nytd)
+      .replace(/{current_datetime_la}/g, latd)
+      .replace(/{current_datetime_sydney}/g, sytd)
+      .replace(/{background}/g, assets.background || "")
+      .replace(/{rules}/g, assets.rules || "")
+      .replace(/{script}/g, assets.script || "")
+      .replace(/{faqs}/g, assets.faqs || "");
+    
     
     // Return escaped prompt for use in HTML attribute
     return escapeForAttribute(prompt);
@@ -175,7 +143,8 @@ ${faqs}`;
     // Fetch signed URL from backend for security
     let signedUrl = '';
     try {
-      const resp = await fetch(`/api/signed-url`);
+      const url = clientVoiceId ? `/api/signed-url?voice_id=${encodeURIComponent(clientVoiceId)}` : `/api/signed-url`;
+      const resp = await fetch(url);
       if (resp.ok) {
         const data = await resp.json();
         signedUrl = data?.signed_url || '';
@@ -191,7 +160,11 @@ ${faqs}`;
     }
     widget.setAttribute('override-prompt', mainPrompt);
     widget.setAttribute('override-first-message', 'Hello! How can I help you today?');
-    widget.setAttribute('action-text', 'Start Voice Chat');
+    if (clientVoiceId) {
+      widget.setAttribute('override-voice-id', clientVoiceId);
+    }
+    widget.setAttribute('avatar-orb-color-1', '#667eea');
+    widget.setAttribute('avatar-orb-color-2', '#764ba2');
     
     widgetContainerRef.current.appendChild(widget);
   };
@@ -221,23 +194,26 @@ ${faqs}`;
   return (
     <div className="client-page">
       <div className="client-header">
-        <h1>{client?.company_name || 'Client Agent'}</h1>
-      </div>
-
-      <div className="widget-actions" style={{ display: 'flex', justifyContent: 'center', marginBottom: '1rem' }}>
-        <button
-          className="back-btn"
-          onClick={handleVoiceCall}
-          disabled={isGenerating}
-          title={isGenerating ? 'Generating prompt' : ''}
-        >
-          {isGenerating ? 'Generating prompt...' : 'Start Voice Chat'}
-        </button>
+        <div>
+          <h1>{client?.company_name || 'Client Agent'}</h1>
+          {overallPromptData?.is_custom && (
+            <span className="custom-prompt-badge">● Custom Prompt Active</span>
+          )}
+        </div>
+        <div className="header-actions">
+          <button
+            onClick={() => window.location.href = '/'}
+            className="secondary-btn"
+          >
+            ← Back
+          </button>
+        </div>
       </div>
       
       <div ref={widgetContainerRef}>
         {/* ElevenLabs widget will be inserted here when prompts are ready */}
       </div>
+
     </div>
   );
 }

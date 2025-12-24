@@ -33,10 +33,14 @@ function ClientForm({ onClientCreated }) {
       });
 
       if (response.ok) {
+        const result = await response.json();
         setFormData({ website_url: '', target_audience: '', company_name: '' });
         if (onClientCreated) onClientCreated();
+        
+        window.location.href = `/client/${result.url}`;
       }
     } catch (error) {
+      console.error('Error creating client:', error);
     } finally {
       setCreating(false);
     }

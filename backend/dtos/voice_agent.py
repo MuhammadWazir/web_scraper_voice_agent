@@ -1,5 +1,5 @@
 from pydantic import BaseModel, HttpUrl
-from typing import Dict, Any
+from typing import Dict, Any, Optional
 
 
 class VoiceAgentRequest(BaseModel):
@@ -10,3 +10,4 @@ class VoiceAgentRequest(BaseModel):
 
 class VoiceAgentResponse(BaseModel):
     client_id: str
+    url: str

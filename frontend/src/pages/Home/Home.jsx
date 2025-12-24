@@ -60,8 +60,10 @@ function Home() {
   return (
     <div className="home-container">
       <header className="home-header">
-        <h1>Voice Agent Dashboard</h1>
-        <p>Manage your AI voice agents</p>
+        <div>
+          <h1>Voice Agent Dashboard</h1>
+          <p>Manage your AI voice agents</p>
+        </div>
       </header>
 
       <div className="home-content">
