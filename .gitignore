@@ -2,6 +2,8 @@
 .env
 
 # Python
+backend/.env
+backend/uv.lock
 .venv
 **/__pycache__
 *.pyc
@@ -24,7 +26,6 @@ wheels/
 .installed.cfg
 *.egg
 MANIFEST
-backend/uv.lock
 
 # Node
 frontend/node_modules
