@@ -32,30 +32,52 @@ function ClientPage() {
     return () => clearInterval(intervalId);
   }, [loading, error, isGenerating, clientId]);
 
+  const [widgetError, setWidgetError] = useState(null);
+
   useEffect(() => {
-    // Load ElevenLabs script if not already loaded
-    if (!document.querySelector('script[src*="elevenlabs"]')) {
+    // Check if browser supports required APIs
+    const checkBrowserSupport = () => {
+      if (typeof window === 'undefined') return false;
+
+      // Check for navigator.mediaDevices
+      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+        // Check if it's because of HTTP (not HTTPS)
+        if (window.location.protocol !== 'https:' && window.location.hostname !== 'localhost') {
+          setWidgetError('Voice chat requires HTTPS. Please access this page via HTTPS or contact support.');
+          return false;
+        }
+        setWidgetError('Your browser does not support voice chat. Please use a modern browser like Chrome, Firefox, or Safari.');
+        return false;
+      }
+      return true;
+    };
+
+    // Load ElevenLabs script if not already loaded and browser is supported
+    if (checkBrowserSupport() && !document.querySelector('script[src*="elevenlabs"]')) {
       const script = document.createElement('script');
       script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
       script.async = true;
+      script.onerror = () => {
+        setWidgetError('Failed to load voice chat widget. Please refresh the page.');
+      };
       document.body.appendChild(script);
     }
 
     // Initialize widget when client data is available
-    if (client && widgetContainerRef.current && !isGenerating) {
+    if (client && widgetContainerRef.current && !isGenerating && !widgetError) {
       initializeWidget();
     }
-  }, [client, isGenerating, clientVoiceId]);
+  }, [client, isGenerating, clientVoiceId, widgetError]);
 
   const fetchClient = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
       const response = await fetch(`/api/client/${clientId}?t=${Date.now()}`, { cache: 'no-store' });
-      
+
       if (!response.ok) {
         throw new Error('Client not found');
       }
-      
+
       const data = await response.json();
       setClient(data);
     } catch (err) {
@@ -92,11 +114,11 @@ function ClientPage() {
   const generateMainPrompt = (assets) => {
     const now = new Date();
     const daysOfWeek = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-    const nytd = now.toLocaleString("en-US", { timeZone: "America/New_York", weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'});
-    const latd = now.toLocaleString("en-US", { timeZone: "America/Los_Angeles", weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'});
-    const sytd = now.toLocaleString("en-US", { timeZone: "Australia/Sydney", weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit'});
-    
-    
+    const nytd = now.toLocaleString("en-US", { timeZone: "America/New_York", weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const latd = now.toLocaleString("en-US", { timeZone: "America/Los_Angeles", weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const sytd = now.toLocaleString("en-US", { timeZone: "Australia/Sydney", weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+
+
     // Helper function to escape quotes and clean text for HTML attribute
     const escapeForAttribute = (text) => {
       if (!text) return "";
@@ -110,14 +132,14 @@ function ClientPage() {
         .replace(/\s+/g, " ")
         .trim();
     };
-    
+
     // Use the custom or default overall prompt template
     let prompt = overallPromptData.overall_prompt || "";
-    
+
     // Replace placeholders
     prompt = prompt
       .replace(/{day_of_week}/g, daysOfWeek[now.getUTCDay()])
-      .replace(/{current_datetime_utc}/g, now.toISOString().replace("T",", ").replace("Z"," in UTC"))
+      .replace(/{current_datetime_utc}/g, now.toISOString().replace("T", ", ").replace("Z", " in UTC"))
       .replace(/{current_datetime_ny}/g, nytd)
       .replace(/{current_datetime_la}/g, latd)
       .replace(/{current_datetime_sydney}/g, sytd)
@@ -125,8 +147,8 @@ function ClientPage() {
       .replace(/{rules}/g, assets.rules || "")
       .replace(/{script}/g, assets.script || "")
       .replace(/{faqs}/g, assets.faqs || "");
-    
-    
+
+
     // Return escaped prompt for use in HTML attribute
     return escapeForAttribute(prompt);
   };
@@ -165,7 +187,7 @@ function ClientPage() {
     }
     widget.setAttribute('avatar-orb-color-1', '#667eea');
     widget.setAttribute('avatar-orb-color-2', '#764ba2');
-    
+
     widgetContainerRef.current.appendChild(widget);
   };
 
@@ -209,7 +231,23 @@ function ClientPage() {
           </button>
         </div>
       </div>
-      
+
+      {/* Widget Error Banner */}
+      {widgetError && (
+        <div style={{
+          margin: '20px',
+          padding: '16px 20px',
+          backgroundColor: '#fee',
+          border: '1px solid #fcc',
+          borderRadius: '8px',
+          color: '#c00',
+          fontSize: '15px',
+          lineHeight: '1.6'
+        }}>
+          <strong>⚠️ Voice Chat Unavailable:</strong> {widgetError}
+        </div>
+      )}
+
       <div ref={widgetContainerRef}>
         {/* ElevenLabs widget will be inserted here when prompts are ready */}
       </div>
