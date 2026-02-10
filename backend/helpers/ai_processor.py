@@ -19,8 +19,7 @@ async def get_openai_client():
         _openai_client = AsyncOpenAI(api_key=config.openai_api_key)
     return _openai_client
 
-async def process_prompts(website_url: str, content: str, audience: str, model: str = "gpt-4o"):
-    print(f"Processing prompts for {website_url} and audience: {audience}")
+async def process_prompts(website_url: str, content: str, audience: str, model: str = "gpt-5"):
     client = await get_openai_client()
     
     prompts = {
@@ -87,7 +86,7 @@ async def _call_openai(client: AsyncOpenAI, model: str, prompt: str, key: str):
         )
     return (key, response.choices[0].message.content.strip()) 
 
-async def summarize_chunks_in_parallel(chunks: list[str], model: str = "gpt-4o") -> str:
+async def summarize_chunks_in_parallel(chunks: list[str], model: str = "gpt-5") -> str:
     client = await get_openai_client()
     
     async def summarize_chunk(chunk: str, index: int) -> tuple[str, str]:

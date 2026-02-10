@@ -60,7 +60,7 @@ async def process_prompts_background(client_id: str, website_url: str, target_au
 				updated_client = _add_url_slug_to_client(updated_client)
 				await manager.broadcast_client_update(updated_client)
 	except Exception as e:
-		pass
+		raise e
 
 
 def _add_url_slug_to_client(client: dict) -> dict:
